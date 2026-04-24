@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ก้องล้อซิ่ง ชลบุรี - GOSU GARAGE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --neon-red: #ef4444;
+        }
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #050505;
+            color: #f0f0f0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        /* Glassmorphism Effect */
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+        .neon-text {
+            text-shadow: 0 0 25px rgba(239, 68, 68, 0.7);
+        }
+        /* Branch Buttons Animation */
+        .branch-btn {
+            transition: all 0.3s ease;
+        }
+        .branch-btn.active {
+            background: var(--neon-red);
+            color: white;
+            box-shadow: 0 0 35px rgba(239, 68, 68, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        /* Calendar UI & Animations */
+        .calendar-day {
+            aspect-ratio: 1/1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.2s ease-in-out;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .calendar-day:hover:not(.holiday) {
+            background: rgba(239, 68, 68, 0.2);
+            transform: scale(1.05);
+        }
+        .calendar-day.active {
+            background: var(--neon-red) !important;
+            color: white;
+            box-shadow: 0 0 20px var(--neon-red);
+            transform: scale(1.1);
+            font-weight: 900;
+        }
+        .calendar-day.today {
+            border: 2px solid var(--neon-red);
+            color: var(--neon-red);
+        }
+        
+        /* Holiday Styles (New) */
+        .calendar-day.holiday {
+            background: rgba(255, 0, 0, 0.15) !important;
+            color: #555 !important;
+            cursor: not-allowed;
+            border: 1px dashed rgba(255, 0, 0, 0.3);
+            pointer-events: none;
+        }
+        .holiday-label {
+            font-size: 8px;
+            color: #ef4444;
+            font-weight: 900;
+            margin-top: 2px;
+            text-transform: uppercase;
+        }
+
+        /* Admin Overlay Background (New) */
+        #adminOverlay {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 0.2;
+            z-index: -1;
+            filter: grayscale(80%);
+        }
+
+        /* Custom Scrollbar */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: var(--neon-red);
+            border-radius: 10px;
+        }
+        
+        /* Modal Transitions */
+        .modal-enter {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        .modal-enter-active {
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 300ms, transform 300ms;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6 lg:p-8 relative">
+
+    <header class="max-w-7xl mx-auto mb-10 md:mb-12 flex flex-col xl:flex-row justify-between items-center gap-6 md:gap-8">
+        <div class="text-center xl:text-left transition-transform duration-500 hover:scale-[1.02]">
+            <h1 class="text-4xl md:text-5xl lg:text-6xl font-black text-red-600 italic tracking-tighter neon-text uppercase leading-none">ก้องล้อซิ่ง ชลบุรี</h1>
+            <p class="text-xs md:text-sm text-gray-500 mt-2 font-bold tracking-[0.2em] md:tracking-[0.3em] uppercase italic">ศูนย์บริการล้อ ยาง และช่วงล่าง ครบวงจร</p>
+        </div>
+        <div id="socialLinksHeader" class="grid grid-cols-2 md:grid-cols-4 gap-3 w-full xl:w-auto">
+            </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+        
+        <div class="lg:col-span-8 space-y-6 lg:space-y-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+                
+                <div class="glass p-6 md:p-8 rounded-3xl border-l-[6px] md:border-l-[8px] border-red-600 shadow-xl transition-all duration-300 hover:shadow-red-900/20">
+                    <div class="flex justify-between items-center mb-6">
+                        <button onclick="changeMonth(-1)" class="w-10 h-10 flex items-center justify-center text-red-500 font-black glass rounded-xl hover:bg-red-600 hover:text-white transition-all duration-300">❮</button>
+                        <h2 id="monthLabel" class="text-base md:text-lg font-black italic text-white uppercase"></h2>
+                        <button onclick="changeMonth(1)" class="w-10 h-10 flex items-center justify-center text-red-500 font-black glass rounded-xl hover:bg-red-600 hover:text-white transition-all duration-300">❯</button>
+                    </div>
+                    <div id="calendarGrid" class="grid grid-cols-7 gap-1.5 md:gap-2"></div>
+                </div>
+
+                <div class="glass p-6 md:p-8 rounded-3xl flex flex-col h-[350px] md:h-[400px] border-white/5 border shadow-xl">
+                    <h3 class="text-base md:text-lg font-black italic text-red-500 mb-4 uppercase tracking-widest border-b border-white/5 pb-3">คิวงานประจำวัน</h3>
+                    <div id="dayQueueDisplay" class="space-y-3 overflow-y-auto pr-2 custom-scroll flex-1 relative"></div>
+                </div>
+            </div>
+
+            <div id="bookingSection" class="glass p-6 md:p-10 rounded-3xl hidden border-t-[8px] border-red-600 shadow-xl transition-all duration-500 opacity-0 transform translate-y-4">
+                <h2 class="text-2xl md:text-3xl font-black italic mb-8 text-white uppercase" id="selectedDateLabel"></h2>
+                
+                <form id="bookingForm" class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                    <input type="hidden" id="dateInput">
+                    <div class="relative group">
+                        <input type="text" id="custName" required placeholder="ชื่อผู้ติดต่อ" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl outline-none focus:border-red-600 transition-all duration-300 text-sm font-bold text-white group-hover:bg-white/10">
+                    </div>
+                    <div class="relative group">
+                        <input type="tel" id="custPhone" required placeholder="เบอร์โทรศัพท์" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl outline-none focus:border-red-600 transition-all duration-300 text-sm font-bold text-white group-hover:bg-white/10">
+                    </div>
+                    <div class="relative group">
+                        <input type="text" id="carModel" required placeholder="ยี่ห้อ / รุ่นรถ" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl outline-none focus:border-red-600 transition-all duration-300 text-sm font-bold text-white uppercase group-hover:bg-white/10">
+                    </div>
+                    <div class="relative group">
+                        <input type="text" id="carPlate" required placeholder="เลขทะเบียนรถ" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl outline-none focus:border-red-600 transition-all duration-300 text-sm font-bold text-white uppercase group-hover:bg-white/10">
+                    </div>
+                    
+                    <div class="md:col-span-2 mt-2">
+                        <p class="text-[10px] md:text-xs text-red-500 mb-3 font-black italic uppercase tracking-wider">1. เลือกสาขาเข้าใช้บริการ</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button type="button" onclick="selectBranch(1)" id="b1" class="branch-btn glass p-4 rounded-2xl font-black text-[11px] md:text-xs italic">สาขา 1 (ล้อ-ยาง)</button>
+                            <button type="button" onclick="selectBranch(2)" id="b2" class="branch-btn glass p-4 rounded-2xl font-black text-[11px] md:text-xs italic">สาขา 2 (ช่วงล่าง)</button>
+                        </div>
+                    </div>
+                    
+                    <div class="md:col-span-2 mt-2">
+                        <p class="text-[10px] md:text-xs text-red-500 mb-3 font-black italic uppercase tracking-wider">2. เลือกเวลาที่สะดวก</p>
+                        <div id="timeGrid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3"></div>
+                    </div>
+                    
+                    <button type="submit" class="md:col-span-2 bg-red-600 py-4 md:py-5 rounded-2xl font-black text-lg md:text-xl hover:bg-red-500 transition-all duration-300 mt-4 uppercase italic shadow-[0_0_20px_rgba(239,68,68,0.4)] hover:shadow-[0_0_30px_rgba(239,68,68,0.6)] transform hover:-translate-y-1 active:translate-y-1">ยืนยันการนัดหมาย</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="lg:col-span-4 space-y-6 lg:space-y-8">
+            <div class="glass p-6 md:p-8 rounded-3xl border-b-[6px] border-red-600 shadow-xl transition-all duration-300 hover:shadow-red-900/20">
+                <h3 id="branchTag" class="text-[10px] md:text-xs font-black italic text-red-500 uppercase mb-4 tracking-widest transition-all">สาขา 1: ล้อ-ยาง</h3>
+                <div class="flex gap-2 mb-6">
+                    <button onclick="showMap(1)" id="mapBtn1" class="flex-1 py-3 rounded-xl text-[10px] font-black glass branch-btn active">สาขา 1</button>
+                    <button onclick="showMap(2)" id="mapBtn2" class="flex-1 py-3 rounded-xl text-[10px] font-black glass">สาขา 2</button>
+                </div>
+                <div id="mapWrapper" class="rounded-2xl overflow-hidden h-[200px] md:h-[250px] bg-black border border-white/10 mb-6 relative group">
+                    </div>
+                <button onclick="openNavigation()" class="w-full bg-white text-black py-4 rounded-2xl font-black text-[10px] md:text-xs uppercase flex items-center justify-center gap-2 hover:bg-red-600 hover:text-white transition-all duration-300 shadow-md transform hover:-translate-y-1">
+                    <i class="fas fa-location-arrow"></i> นำทางไปร้าน (Google Maps)
+                </button>
+            </div>
+
+            <div class="glass p-8 md:p-10 rounded-3xl text-center border-t-[6px] border-red-600 shadow-xl relative overflow-hidden group">
+                <div class="absolute inset-0 bg-red-600/5 transform translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+                <p class="text-[10px] md:text-xs text-gray-500 font-black italic mb-3 uppercase relative z-10">เวลาทำการ</p>
+                <p class="text-4xl md:text-5xl font-black text-white italic tracking-tighter mb-5 neon-text relative z-10 transition-transform duration-300 group-hover:scale-105">08:00 - 20:00</p>
+                <div class="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 text-green-500 rounded-full text-[9px] md:text-[10px] font-black uppercase border border-green-500/20 relative z-10">
+                    <span class="w-2 h-2 bg-green-500 rounded-full animate-ping"></span> เปิดให้บริการปกติ
+                </div>
+            </div>
+            
+            <button onclick="handleAdminAuth()" class="w-full py-4 text-gray-800 text-[9px] md:text-[10px] font-black hover:text-red-600 transition-all duration-300 uppercase tracking-[0.5em] md:tracking-[1em]">ระบบหลังบ้าน Admin</button>
+        </div>
+    </main>
+
+    <div id="adminView" class="fixed inset-0 z-[100] hidden flex-col transition-all duration-500">
+        <div class="absolute inset-0 bg-black/90 backdrop-blur-xl"></div>
+        <div id="adminOverlay"></div>
+        
+        <div class="relative z-10 w-full h-full overflow-y-auto p-4 md:p-8 lg:p-12 custom-scroll">
+            <div class="max-w-7xl mx-auto">
+                
+                <div class="flex flex-col md:flex-row justify-between items-center mb-10 border-b border-white/10 pb-6 gap-4">
+                    <div class="text-center md:text-left">
+                        <h2 class="text-3xl md:text-4xl font-black italic text-red-600 uppercase neon-text">Admin Dashboard</h2>
+                        <p class="text-gray-400 text-[10px] md:text-xs font-bold uppercase mt-1 tracking-widest">จัดการคิวงานและข้อมูลร้าน</p>
+                    </div>
+                    <button onclick="closeAdmin()" class="bg-white text-black px-6 py-3 rounded-xl font-black text-[10px] md:text-xs uppercase hover:bg-red-600 hover:text-white transition-all duration-300 transform hover:scale-105 shadow-md">ปิดหน้าต่าง / ออกจากระบบ</button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 mb-10">
+                    
+                    <div class="glass p-6 md:p-8 rounded-3xl space-y-5 shadow-xl hover:border-red-600/50 transition-colors duration-300">
+                        <h4 class="text-red-500 font-black italic uppercase text-xs md:text-sm border-b border-white/5 pb-3 flex items-center gap-2"><i class="fas fa-cog"></i> ข้อมูลร้าน & พื้นหลัง</h4>
+                        <div class="space-y-3">
+                            <input type="text" id="fbInp" placeholder="ลิงก์ Facebook" class="w-full bg-white/5 border border-white/10 p-3 md:p-4 rounded-xl text-xs text-white focus:border-red-600 transition-all outline-none">
+                            <input type="text" id="ytInp" placeholder="ลิงก์ YouTube" class="w-full bg-white/5 border border-white/10 p-3 md:p-4 rounded-xl text-xs text-white focus:border-red-600 transition-all outline-none">
+                            <input type="text" id="phoneInp" placeholder="เบอร์โทรศัพท์" class="w-full bg-white/5 border border-white/10 p-3 md:p-4 rounded-xl text-xs text-white focus:border-red-600 transition-all outline-none">
+                            <input type="text" id="bgInp" placeholder="ลิงก์รูปภาพพื้นหลัง Admin (URL)" class="w-full bg-white/5 border border-white/10 p-3 md:p-4 rounded-xl text-xs text-white focus:border-red-600 transition-all outline-none">
+                        </div>
+                        <button onclick="saveAdminSettings()" class="w-full bg-green-600 py-3 md:py-4 rounded-xl font-black uppercase text-xs hover:bg-green-500 transition-all duration-300 transform hover:-translate-y-1 shadow-md">บันทึกข้อมูลทั้งหมด</button>
+                    </div>
+
+                    <div class="glass p-6 md:p-8 rounded-3xl space-y-5 shadow-xl hover:border-red-600/50 transition-colors duration-300">
+                        <h4 class="text-red-500 font-black italic uppercase text-xs md:text-sm border-b border-white/5 pb-3 flex items-center gap-2"><i class="fas fa-calendar-times"></i> จัดการวันหยุดร้าน</h4>
+                        <div class="flex gap-2">
+                            <input type="date" id="holidayInp" class="flex-1 bg-black/50 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-red-600 transition-all">
+                            <button onclick="addHoliday()" class="bg-red-600 px-4 rounded-xl font-black text-[9px] md:text-[10px] uppercase hover:bg-red-500 transition-all duration-300 shadow-md">เพิ่มวันหยุด</button>
+                        </div>
+                        <div id="holidayListAdmin" class="flex flex-wrap gap-2 max-h-[150px] overflow-y-auto custom-scroll p-1"></div>
+                    </div>
+
+                    <div class="glass p-6 md:p-8 rounded-3xl space-y-5 shadow-xl hover:border-red-600/50 transition-colors duration-300">
+                        <h4 class="text-red-500 font-black italic uppercase text-xs md:text-sm border-b border-white/5 pb-3 flex items-center gap-2"><i class="fas fa-clock"></i> จัดการเวลาจอง</h4>
+                        <div class="flex gap-2">
+                            <input type="time" id="newTimeInput" class="flex-1 bg-black/50 border border-white/10 rounded-xl p-3 text-white text-xs outline-none focus:border-red-600 transition-all">
+                            <button onclick="addTime()" class="bg-red-600 px-4 rounded-xl font-black text-[9px] md:text-[10px] uppercase hover:bg-red-500 transition-all duration-300 shadow-md">เพิ่มเวลา</button>
+                        </div>
+                        <div id="timeListAdmin" class="flex flex-wrap gap-2 max-h-[150px] overflow-y-auto custom-scroll p-1"></div>
+                    </div>
+                </div>
+
+                <div class="glass p-6 md:p-8 rounded-3xl shadow-xl">
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                        <h4 class="text-red-500 font-black italic uppercase text-base md:text-lg flex items-center gap-2"><i class="fas fa-clipboard-list"></i> รายการจองคิวลูกค้า</h4>
+                        <input type="date" id="adminDateFilter" onchange="renderAdminTable()" class="bg-red-600 rounded-xl p-3 font-black text-xs md:text-sm text-white outline-none cursor-pointer hover:bg-red-500 transition-colors shadow-md w-full sm:w-auto">
+                    </div>
+                    <div class="overflow-x-auto rounded-2xl border border-white/5 bg-black/20">
+                        <table class="w-full text-left text-xs md:text-sm whitespace-nowrap">
+                            <thead class="bg-white/5 text-red-500 font-black uppercase italic border-b border-white/10">
+                                <tr>
+                                    <th class="p-4 tracking-widest">เวลา</th>
+                                    <th class="p-4 tracking-widest">สาขา</th>
+                                    <th class="p-4 tracking-widest">ชื่อลูกค้า / เบอร์โทร</th>
+                                    <th class="p-4 tracking-widest">ข้อมูลรถ</th>
+                                    <th class="p-4 text-center tracking-widest">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminTableBody" class="divide-y divide-white/5 text-gray-200">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data State Management
+        let currentMonth = new Date();
+        let selectedDateStr = null;
+        let selectedTime = null;
+        let bookingBranch = 1;
+
+        // DB Initialization
+        function getDB() {
+            let db = localStorage.getItem('kong_gosu_full_db');
+            if (!db) {
+                return {
+                    queues: [],
+                    holidays: [],
+                    map1: '',
+                    map2: '',
+                    social: { fb: '#', yt: '#', phone: '083-769-5438', adminBg: '' },
+                    slots: ["09:00", "11:00", "13:00", "15:00", "17:00", "19:00"]
+                };
+            }
+            return JSON.parse(db);
+        }
+
+        function saveDB(db) {
+            localStorage.setItem('kong_gosu_full_db', JSON.stringify(db));
+            renderUI();
+        }
+
+        // Init App
+        window.onload = () => {
+            renderUI();
+            const today = new Date().toLocaleDateString('en-CA');
+            document.getElementById('adminDateFilter').value = today;
+        };
+
+        // Render Main UI Component
+        function renderUI() {
+            const db = getDB();
+            
+            // Header Links with Hover Animations
+            const socialHeader = document.getElementById('socialLinksHeader');
+            socialHeader.innerHTML = `
+                <a href="${db.social.fb}" target="_blank" class="glass p-3 md:p-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-600 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300 group">
+                    <i class="fab fa-facebook text-blue-400 group-hover:text-white transition-colors text-base"></i>
+                    <span class="text-[9px] md:text-[10px] font-black italic uppercase">Facebook</span>
+                </a>
+                <a href="${db.social.yt}" target="_blank" class="glass p-3 md:p-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-red-700 hover:-translate-y-1 hover:shadow-lg hover:shadow-red-600/30 transition-all duration-300 group">
+                    <i class="fab fa-youtube text-red-500 group-hover:text-white transition-colors text-base"></i>
+                    <span class="text-[9px] md:text-[10px] font-black italic uppercase">YouTube</span>
+                </a>
+                <div class="glass p-3 md:p-4 rounded-2xl flex items-center justify-center gap-2 border-white/5 cursor-default">
+                    <i class="fas fa-phone-alt text-red-500 animate-pulse text-sm"></i>
+                    <span class="text-[9px] md:text-[10px] font-black italic text-gray-400">${db.social.phone}</span>
+                </div>
+                <button onclick="alert('LINE ID: KONGKONG36')" class="glass p-3 md:p-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-green-600 hover:-translate-y-1 hover:shadow-lg hover:shadow-green-500/30 transition-all duration-300 group">
+                    <i class="fab fa-line text-green-400 group-hover:text-white transition-colors text-base"></i>
+                    <span class="text-[9px] md:text-[10px] font-black italic uppercase">Line ID</span>
+                </button>
+            `;
+
+            // Setup Admin Overlay Background
+            const adminOverlay = document.getElementById('adminOverlay');
+            if (db.social.adminBg) {
+                adminOverlay.style.backgroundImage = `url('${db.social.adminBg}')`;
+            } else {
+                adminOverlay.style.backgroundImage = 'none';
+            }
+
+            showMap(1);
+            renderCalendar();
+            renderDayQueue(selectedDateStr);
+            renderAdminTimeList();
+            renderHolidayList();
+        }
+
+        // Open Maps System
+        function openNavigation() {
+            const shopName = bookingBranch === 1 ? "ก้องล้อซิ่ง ชลบุรี" : "ก้องล้อซิ่ง ชลบุรี สาขา 2";
+            window.open(`https://maps.google.com/?q=${encodeURIComponent(shopName)}`, '_blank');
+        }
+
+        // Toggle Maps
+        function showMap(branchId) {
+            const db = getDB();
+            bookingBranch = branchId;
+            
+            const btn1 = document.getElementById('mapBtn1');
+            const btn2 = document.getElementById('mapBtn2');
+            const tag = document.getElementById('branchTag');
+            const wrapper = document.getElementById('mapWrapper');
+
+            if (branchId === 1) {
+                btn1.className = 'flex-1 py-3 rounded-xl text-[10px] font-black branch-btn active';
+                btn2.className = 'flex-1 py-3 rounded-xl text-[10px] font-black glass branch-btn hover:bg-white/10';
+                tag.innerText = "สาขา 1: ล้อ-ยาง";
+                wrapper.innerHTML = db.map1 ? db.map1 : '<div class="absolute inset-0 flex items-center justify-center text-white/20 font-black text-[10px] md:text-xs uppercase tracking-widest"><i class="fas fa-map-marked-alt text-xl mr-2"></i> รอเพิ่มแผนที่สาขา 1</div>';
+            } else {
+                btn1.className = 'flex-1 py-3 rounded-xl text-[10px] font-black glass branch-btn hover:bg-white/10';
+                btn2.className = 'flex-1 py-3 rounded-xl text-[10px] font-black branch-btn active';
+                tag.innerText = "สาขา 2: ช่วงล่าง-โช้ค";
+                wrapper.innerHTML = db.map2 ? db.map2 : '<div class="absolute inset-0 flex items-center justify-center text-white/20 font-black text-[10px] md:text-xs uppercase tracking-widest"><i class="fas fa-map-marked-alt text-xl mr-2"></i> รอเพิ่มแผนที่สาขา 2</div>';
+            }
+        }
+
+        // Render Calendar Logic (With Holidays)
+        function renderCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            const label = document.getElementById('monthLabel');
+            const db = getDB();
+            
+            label.innerText = currentMonth.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
+            grid.innerHTML = '';
+            
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth();
+            const firstDay = new Date(year, month, 1).getDay();
+            const lastDate = new Date(year, month + 1, 0).getDate();
+            
+            const daysOfWeek = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
+            daysOfWeek.forEach(d => {
+                grid.innerHTML += `<div class="text-[10px] font-black text-gray-500 text-center uppercase mb-2 md:mb-4 tracking-widest">${d}</div>`;
+            });
+            
+            for (let i = 0; i < firstDay; i++) {
+                grid.innerHTML += `<div></div>`;
+            }
+            
+            const today = new Date().toLocaleDateString('en-CA');
+            
+            for (let d = 1; d <= lastDate; d++) {
+                const dateObj = new Date(year, month, d);
+                // Fix timezone offset for formatting
+                const dStr = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                const isHoliday = db.holidays.includes(dStr);
+                
+                const dayEl = document.createElement('div');
+                dayEl.className = 'calendar-day';
+                
+                if (isHoliday) {
+                    dayEl.classList.add('holiday');
+                } else {
+                    dayEl.onclick = () => selectDate(dStr);
+                }
+                
+                if (dStr === selectedDateStr) dayEl.classList.add('active');
+                if (dStr === today) dayEl.classList.add('today');
+                
+                dayEl.innerHTML = `<span>${d}</span>${isHoliday ? '<span class="holiday-label">ปิดร้าน</span>' : ''}`;
+                grid.appendChild(dayEl);
+            }
+        }
+
+        function changeMonth(val) {
+            currentMonth.setMonth(currentMonth.getMonth() + val);
+            renderCalendar();
+        }
+
+        // Handle Date Selection & Animation
+        function selectDate(date) {
+            selectedDateStr = date;
+            selectedTime = null;
+            renderCalendar();
+            
+            const bookingSec = document.getElementById('bookingSection');
+            bookingSec.classList.remove('hidden');
+            
+            // Re-trigger animation
+            setTimeout(() => {
+                bookingSec.classList.remove('opacity-0', 'translate-y-4');
+                bookingSec.classList.add('opacity-100', 'translate-y-0');
+            }, 10);
+            
+            const dateObj = new Date(date);
+            const formattedDate = dateObj.toLocaleDateString('th-TH', { dateStyle: 'long' });
+            document.getElementById('selectedDateLabel').innerText = "นัดวันที่ " + formattedDate;
+            document.getElementById('dateInput').value = date;
+            
+            selectBranch(1);
+            renderDayQueue(date);
+            
+            // Smooth Scroll
+            window.scrollTo({
+                top: bookingSec.offsetTop - 50,
+                behavior: 'smooth'
+            });
+        }
+
+        function selectBranch(b) {
+            bookingBranch = b;
+            document.querySelectorAll('#b1, #b2').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById('b' + b).classList.add('active');
+            renderTimeSlots(selectedDateStr);
+        }
+
+        function renderTimeSlots(date) {
+            const db = getDB();
+            const grid = document.getElementById('timeGrid');
+            grid.innerHTML = '';
+            
+            db.slots.forEach(h => {
+                const isFull = db.queues.filter(q => q.date === date && q.time === h && q.branch == bookingBranch).length >= 1;
+                
+                let btnClass = "p-3 md:p-4 rounded-xl border text-[10px] md:text-[11px] font-black transition-all duration-300 ";
+                let onClickEvent = "";
+                let statusText = "";
+                
+                if (isFull) {
+                    btnClass += "bg-neutral-900 border-neutral-800 text-gray-700 opacity-50 cursor-not-allowed";
+                    statusText = " (เต็ม)";
+                } else {
+                    if (selectedTime === h) {
+                        btnClass += "bg-red-600 text-white border-red-600 shadow-[0_0_15px_rgba(239,68,68,0.4)] transform scale-105";
+                    } else {
+                        btnClass += "bg-white/5 border-white/10 text-white hover:border-red-600 hover:bg-red-600/10 hover:-translate-y-1";
+                    }
+                    onClickEvent = `onclick="selectedTime='${h}'; renderTimeSlots('${date}')"`;
+                }
+                
+                grid.innerHTML += `<button type="button" ${onClickEvent} class="${btnClass}">${h}${statusText}</button>`;
+            });
+        }
+
+        // Render Sidebar Queue List with hover effects
+        function renderDayQueue(date) {
+            const db = getDB();
+            const display = document.getElementById('dayQueueDisplay');
+            const target = date || new Date().toLocaleDateString('en-CA');
+            
+            const filtered = db.queues.filter(q => q.date === target).sort((a, b) => a.time.localeCompare(b.time));
+            
+            if (filtered.length === 0) {
+                display.innerHTML = `
+                    <div class="absolute inset-0 flex flex-col items-center justify-center opacity-20 transition-opacity hover:opacity-50">
+                        <i class="fas fa-car-side text-5xl mb-4 transform -scale-x-100"></i>
+                        <p class="text-[10px] md:text-xs font-black uppercase tracking-widest">ยังไม่มีรายการนัดจอง</p>
+                    </div>`;
+                return;
+            }
+
+            display.innerHTML = filtered.map((q, index) => `
+                <div class="bg-white/5 p-4 md:p-5 rounded-2xl border-l-4 border-red-600 flex justify-between items-center group border border-white/10 transition-all duration-300 hover:bg-white/10 hover:border-l-[6px] hover:translate-x-1.5" style="animation: slideIn 0.3s ease forwards ${index * 0.1}s; opacity: 0; transform: translateX(-20px);">
+                    <div>
+                        <p class="text-red-500 font-black text-[10px] md:text-xs italic tracking-widest">${q.time} น.</p>
+                        <h4 class="text-white font-black text-xs md:text-sm uppercase italic mt-1">${q.car}</h4>
+                    </div>
+                    <span class="text-[8px] md:text-[9px] bg-red-600/10 px-3 py-1.5 rounded-full font-black uppercase text-red-500 border border-red-600/30 shadow-[0_0_10px_rgba(239,68,68,0.2)]">สาขา ${q.branch}</span>
+                </div>
+            `).join('');
+        }
+
+        // Handle Booking Submission
+        document.getElementById('bookingForm').onsubmit = (e) => {
+            e.preventDefault();
+            if (!selectedTime) {
+                alert('กรุณาเลือกเวลาที่ต้องการจองด้วยครับ');
+                return;
+            }
+            
+            const db = getDB();
+            const newQueue = {
+                id: Date.now(),
+                date: document.getElementById('dateInput').value,
+                time: selectedTime,
+                branch: bookingBranch,
+                name: document.getElementById('custName').value,
+                phone: document.getElementById('custPhone').value,
+                car: document.getElementById('carModel').value,
+                plate: document.getElementById('carPlate').value
+            };
+            
+            db.queues.push(newQueue);
+            saveDB(db);
+            alert('บันทึกการจองสำเร็จแล้วครับพี่! แล้วพบกันที่ร้านครับ');
+            location.reload();
+        };
+
+        // --- Admin System ---
+
+        function handleAdminAuth() { 
+            const pass = prompt("กรุณาใส่รหัสผ่านผู้ดูแลระบบ:");
+            if (pass === '123') {
+                const adminPanel = document.getElementById('adminView');
+                adminPanel.classList.remove('hidden');
+                adminPanel.classList.add('flex');
+                
+                // Overlay Animation
+                setTimeout(() => {
+                    adminPanel.classList.add('opacity-100');
+                }, 10);
+                
+                const db = getDB();
+                document.getElementById('fbInp').value = db.social.fb;
+                document.getElementById('ytInp').value = db.social.yt;
+                document.getElementById('phoneInp').value = db.social.phone;
+                document.getElementById('bgInp').value = db.social.adminBg || '';
+                
+                renderAdminTable(); 
+            } else if (pass !== null) {
+                alert('รหัสผ่านไม่ถูกต้องครับ!');
+            }
+        }
+
+        function closeAdmin() {
+            const adminPanel = document.getElementById('adminView');
+            adminPanel.classList.remove('opacity-100');
+            setTimeout(() => {
+                adminPanel.classList.add('hidden');
+                adminPanel.classList.remove('flex');
+            }, 500);
+        }
+
+        function saveAdminSettings() {
+            const db = getDB();
+            db.social = { 
+                fb: document.getElementById('fbInp').value, 
+                yt: document.getElementById('ytInp').value, 
+                phone: document.getElementById('phoneInp').value,
+                adminBg: document.getElementById('bgInp').value
+            };
+            saveDB(db);
+            alert("บันทึกการตั้งค่าสำเร็จ!");
+        }
+
+        // Holiday Management
+        function addHoliday() {
+            const dateVal = document.getElementById('holidayInp').value;
+            if (!dateVal) return;
+            const db = getDB();
+            if (!db.holidays.includes(dateVal)) {
+                db.holidays.push(dateVal);
+                db.holidays.sort();
+                saveDB(db);
+                renderHolidayList();
+            }
+            document.getElementById('holidayInp').value = '';
+        }
+
+        function removeHoliday(dateVal) {
+            const db = getDB();
+            db.holidays = db.holidays.filter(x => x !== dateVal);
+            saveDB(db);
+            renderHolidayList();
+        }
+
+        function renderHolidayList() {
+            const db = getDB();
+            const container = document.getElementById('holidayListAdmin');
+            container.innerHTML = db.holidays.map(d => `
+                <div class="bg-red-600/10 text-red-500 px-3 py-1.5 rounded-lg text-[9px] md:text-[10px] font-black border border-red-600/30 flex items-center gap-1.5 group transition-all hover:bg-red-600 hover:text-white">
+                    <i class="fas fa-calendar-day"></i> ${d} 
+                    <button onclick="removeHoliday('${d}')" class="ml-1 w-4 h-4 rounded-full bg-red-600/20 flex items-center justify-center group-hover:bg-white group-hover:text-red-600 transition-colors">✕</button>
+                </div>
+            `).join('');
+        }
+
+        // Time Slots Management
+        function addTime() {
+            const t = document.getElementById('newTimeInput').value;
+            if (!t) return;
+            const db = getDB();
+            if (!db.slots.includes(t)) {
+                db.slots.push(t);
+                db.slots.sort();
+                saveDB(db);
+                renderAdminTimeList();
+            }
+            document.getElementById('newTimeInput').value = '';
+        }
+
+        function removeTime(t) {
+            const db = getDB();
+            db.slots = db.slots.filter(x => x !== t);
+            saveDB(db);
+            renderAdminTimeList();
+        }
+
+        function renderAdminTimeList() {
+            const db = getDB();
+            const container = document.getElementById('timeListAdmin');
+            container.innerHTML = db.slots.map(t => `
+                <div class="bg-blue-600/10 text-blue-400 px-3 py-1.5 rounded-lg text-[9px] md:text-[10px] font-black border border-blue-500/30 flex items-center gap-1.5 group transition-all hover:bg-blue-600 hover:text-white">
+                    <i class="far fa-clock"></i> ${t} 
+                    <button onclick="removeTime('${t}')" class="ml-1 w-4 h-4 rounded-full bg-blue-500/20 flex items-center justify-center group-hover:bg-white group-hover:text-blue-600 transition-colors">✕</button>
+                </div>
+            `).join('');
+        }
+
+        // Admin Table View
+        function renderAdminTable() {
+            const filterDate = document.getElementById('adminDateFilter').value;
+            const db = getDB();
+            const tbody = document.getElementById('adminTableBody');
+            
+            const filtered = db.queues.filter(q => q.date === filterDate).sort((a, b) => a.time.localeCompare(b.time));
+            
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-10 md:p-16 text-center text-gray-600 italic font-black uppercase text-xs md:text-sm tracking-widest"><i class="fas fa-folder-open text-2xl md:text-3xl mb-3 block"></i>ไม่มีรายการจองในวันที่เลือก</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(q => `
+                <tr class="hover:bg-white/5 transition-colors duration-200 group">
+                    <td class="p-4 text-red-500 font-black text-sm md:text-base italic"><i class="far fa-clock mr-1 md:mr-2 text-xs md:text-sm opacity-50"></i>${q.time} น.</td>
+                    <td class="p-4 font-black text-gray-400"><span class="bg-white/10 px-3 py-1.5 rounded-md border border-white/10 text-xs">สาขา ${q.branch}</span></td>
+                    <td class="p-4 font-black">
+                        <span class="text-white text-sm md:text-base group-hover:text-red-400 transition-colors">${q.name}</span><br>
+                        <span class="text-[10px] md:text-xs text-gray-500"><i class="fas fa-phone-alt text-[9px] mr-1"></i> ${q.phone}</span>
+                    </td>
+                    <td class="p-4">
+                        <span class="text-white uppercase font-black italic text-xs md:text-sm">${q.car}</span><br>
+                        <span class="text-red-500 font-black text-[10px] md:text-xs tracking-wider">ทะเบียน: ${q.plate}</span>
+                    </td>
+                    <td class="p-4 text-center">
+                        <button onclick="deleteQueue(${q.id})" class="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl glass text-red-500 hover:bg-red-600 hover:text-white transition-all duration-300 transform hover:scale-110 shadow-md flex items-center justify-center mx-auto">
+                            <i class="fas fa-trash-alt text-sm md:text-base"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function deleteQueue(id) {
+            if (confirm('ยืนยันการลบคิวนี้ใช่หรือไม่?')) {
+                let db = getDB();
+                db.queues = db.queues.filter(x => x.id !== id);
+                saveDB(db);
+                renderAdminTable();
+            }
+        }
+    </script>
+    
+    <style>
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+    </style>
+</body>
+</html>
